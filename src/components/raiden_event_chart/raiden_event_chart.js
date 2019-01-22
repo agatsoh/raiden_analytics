@@ -3,15 +3,29 @@ import { render } from "react-dom";
 import EthEventsQueryService from "../../services/eth_event_service.js";
 import { ResponsiveLine } from "@nivo/line";
 import "./raiden_event_chart.css";
+import {
+  Charts,
+  ChartContainer,
+  ChartRow,
+  YAxis,
+  LineChart,
+  ScatterChart,
+  Resizable,
+  Styler,
+  EventMarker
+} from "react-timeseries-charts";
+import { TimeSeries, Index } from "pondjs";
 
 class RaidenEventChart extends React.Component {
   constructor(props) {
     super(props);
-    this.i = 1;
     this.state = {
       error: null,
       isLoaded: false,
-      nivoArray: []
+      tracker: null,
+      trackerValue: "",
+      trackerEvent: null,
+      markerMode: "flag"
     };
   }
 
@@ -21,133 +35,129 @@ class RaidenEventChart extends React.Component {
         return data.aggregations.event_agg.buckets;
       })
       .then(buckets => {
+        const eventSeries = new TimeSeries({
+          name: "Raiden Event Series",
+          columns: ["time", "open", "close", "settled", "newdeposit"],
+          points: this.buildPoints(buckets)
+        });
         this.setState({
           isLoaded: true,
-          nivoArray: this.makeNivoDataArray(buckets)
+          raidenEventSeries: eventSeries
         });
       });
   }
 
-  makeNivoDataArray(buckets) {
-    let closeEvents = buckets.close.channelevents_histogram.buckets;
+  buildPoints(buckets) {
+    let points = [];
     let openEvents = buckets.open.channelevents_histogram.buckets;
+    let closeEvents = buckets.close.channelevents_histogram.buckets;
     let settledEvents = buckets.settled.channelevents_histogram.buckets;
     let newdepositEvents = buckets.newdeposit.channelevents_histogram.buckets;
-    return [
-      this.makeNivoDataObject(closeEvents, "close", "hsl(207, 70%, 50%)"),
-      this.makeNivoDataObject(openEvents, "open", "hsl(285, 70%, 50%)"),
-      this.makeNivoDataObject(settledEvents, "settle", "hsl(145, 70%, 50%)"),
-      this.makeNivoDataObject(
-        newdepositEvents,
-        "newdeposit",
-        "hsl(72, 70%, 50%)"
-      )
-    ];
+    openEvents.map((obj, index) => {
+      points.push([
+        obj.key,
+        obj.doc_count,
+        this.checkArray(closeEvents, obj, index),
+        this.checkArray(settledEvents, obj, index),
+        this.checkArray(newdepositEvents, obj, index)
+      ]);
+    });
+    return points;
   }
 
-  makeNivoDataObject(events, type, color) {
-    return {
-      id: type,
-      color: color,
-      data: events.map(event => {
-        return {
-          x: event.key_as_string,
-          y: event.doc_count
-        };
-      })
-    };
+  checkArray(arr, obj, index) {
+    if (
+      typeof arr != "undefined" &&
+      arr != null &&
+      arr.length != null &&
+      arr.length > 0
+    ) {
+      return arr[index].key === obj.key ? arr[index].doc_count : 0;
+    } else {
+      return 0;
+    }
+  }
+
+  handleTrackerChanged = t => {
+    if (t) {
+      const e = this.state.raidenEventSeries.atTime(t);
+      let day = new Date(e.begin().getTime()).toDateString();
+      this.setState({
+        trackerValue: [
+          { label: "Date", value: `${day}` },
+          { label: "open", value: `${e.get("open")}` },
+          { label: "close", value: `${e.get("close")}` },
+          { label: "settled", value: `${e.get("settled")}` }
+        ],
+        trackerEvent: e
+      });
+    }
+  };
+
+  renderMarker() {
+    return (
+      <EventMarker
+        type="flag"
+        axis="count"
+        event={this.state.trackerEvent}
+        column="open"
+        info={this.state.trackerValue}
+        infoTimeFormat="%Y-%M-%d"
+        infoWidth={120}
+        markerRadius={2}
+        markerStyle={{ fill: "black" }}
+      />
+    );
   }
 
   render() {
-    const { error, isLoaded, nivoArray } = this.state;
-    console.log(this.i);
-    this.i++;
-    // console.log(nivoArray);
-
-    if (isLoaded) {
-      console.log("Isloaded is true");
+    if (this.state.isLoaded) {
       return (
-        <div className="event_chart">
-          <ResponsiveLine
-            data={nivoArray}
-            margin={{
-              top: 50,
-              right: 110,
-              bottom: 50,
-              left: 60
-            }}
-            xScale={{
-              type: "point"
-            }}
-            yScale={{
-              type: "linear",
-              stacked: true,
-              min: "auto",
-              max: "auto"
-            }}
-            axisTop={null}
-            axisRight={null}
-            axisBottom={{
-              orient: "bottom",
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              legend: "transportation",
-              legendOffset: 36,
-              legendPosition: "middle"
-            }}
-            axisLeft={{
-              orient: "left",
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0,
-              legend: "count",
-              legendOffset: -40,
-              legendPosition: "middle"
-            }}
-            dotSize={10}
-            dotColor="inherit:darker(0.3)"
-            dotBorderWidth={2}
-            dotBorderColor="#ffffff"
-            enableDotLabel={true}
-            dotLabel="y"
-            dotLabelYOffset={-12}
-            animate={true}
-            motionStiffness={90}
-            motionDamping={15}
-            legends={[
-              {
-                anchor: "bottom-right",
-                direction: "column",
-                justify: false,
-                translateX: 100,
-                translateY: 0,
-                itemsSpacing: 0,
-                itemDirection: "left-to-right",
-                itemWidth: 80,
-                itemHeight: 20,
-                itemOpacity: 0.75,
-                symbolSize: 12,
-                symbolShape: "circle",
-                symbolBorderColor: "rgba(0, 0, 0, .5)",
-                effects: [
-                  {
-                    on: "hover",
-                    style: {
-                      itemBackground: "rgba(0, 0, 0, .03)",
-                      itemOpacity: 1
-                    }
-                  }
-                ]
-              }
-            ]}
-          />
-        </div>
+        <Resizable>
+          <ChartContainer
+            title="Raiden Events"
+            timeRange={this.state.raidenEventSeries.timerange()}
+            titleStyle={{ fill: "#555", fontWeight: 500 }}
+            utc={true}
+            onTrackerChanged={this.handleTrackerChanged}
+          >
+            <ChartRow height="250">
+              <YAxis
+                id="count"
+                label="Event Count"
+                type="linear"
+                min={this.state.raidenEventSeries.min("open")}
+                max={this.state.raidenEventSeries.max("open")}
+              />
+              <Charts>
+                <LineChart
+                  axis="count"
+                  series={this.state.raidenEventSeries}
+                  columns={["open"]}
+                  style={{ open: { normal: { stroke: "steelblue" } } }}
+                  visible={true}
+                />
+                <LineChart
+                  axis="count"
+                  series={this.state.raidenEventSeries}
+                  columns={["close"]}
+                  style={{ close: { normal: { stroke: "black" } } }}
+                  visible={true}
+                />
+                <LineChart
+                  axis="count"
+                  series={this.state.raidenEventSeries}
+                  columns={["settled"]}
+                  style={{ settled: { normal: { stroke: "green" } } }}
+                />
+                {this.renderMarker()}
+              </Charts>
+            </ChartRow>
+          </ChartContainer>
+        </Resizable>
       );
     } else {
-      return (
-        <div className="raiden_event_chart">This is the Raiden Event Chart</div>
-      );
+      return <div>The chart is getting Loaded</div>;
     }
   }
 }
