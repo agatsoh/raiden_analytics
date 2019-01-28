@@ -1,5 +1,5 @@
-import allEventsAggregateQuery from "./helpers/event_queries.js";
-import config from "./config.js";
+import allEventsAggregateQuery from "./helpers/event_queries";
+import config from "./config";
 
 export default class EthEventsQueryService {
   static async fetchAllEvents() {
@@ -22,5 +22,3 @@ export default class EthEventsQueryService {
     };
   }
 }
-
-window.EthEventsQueryService = EthEventsQueryService;

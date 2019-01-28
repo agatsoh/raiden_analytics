@@ -1,7 +1,6 @@
 import React from "react";
 import { render } from "react-dom";
-import EthEventsQueryService from "../../services/eth_event_service.js";
-import { ResponsiveLine } from "@nivo/line";
+import EthEventsQueryService from "../../services/eth_event_service";
 import "./raiden_event_chart.css";
 import {
   Charts,
@@ -15,9 +14,17 @@ import {
   EventMarker
 } from "react-timeseries-charts";
 import { TimeSeries, Index } from "pondjs";
+import { any } from "prop-types";
 
-class RaidenEventChart extends React.Component {
-  constructor(props) {
+interface EventType {
+  key: number;
+  key_as_string: string;
+  doc_count: number;
+}
+
+class RaidenEventChart extends React.Component<{}, {}> {
+  public state: any;
+  constructor(props: {}) {
     super(props);
     this.state = {
       error: null,
@@ -25,7 +32,8 @@ class RaidenEventChart extends React.Component {
       tracker: null,
       trackerValue: "",
       trackerEvent: null,
-      markerMode: "flag"
+      markerMode: "flag",
+      raidenEventSeries: null
     };
   }
 
@@ -47,13 +55,17 @@ class RaidenEventChart extends React.Component {
       });
   }
 
-  buildPoints(buckets) {
-    let points = [];
+  buildPoints(buckets: any) {
+    let points: number[][] = [];
     let openEvents = buckets.open.channelevents_histogram.buckets;
     let closeEvents = buckets.close.channelevents_histogram.buckets;
     let settledEvents = buckets.settled.channelevents_histogram.buckets;
     let newdepositEvents = buckets.newdeposit.channelevents_histogram.buckets;
-    openEvents.map((obj, index) => {
+    console.log(openEvents);
+    console.log(closeEvents);
+    console.log(settledEvents);
+    console.log(newdepositEvents);
+    openEvents.map((obj: any, index: number) => {
       points.push([
         obj.key,
         obj.doc_count,
@@ -65,12 +77,13 @@ class RaidenEventChart extends React.Component {
     return points;
   }
 
-  checkArray(arr, obj, index) {
+  checkArray(arr: EventType[], obj: any, index: number): number {
     if (
       typeof arr != "undefined" &&
       arr != null &&
       arr.length != null &&
-      arr.length > 0
+      arr.length > 0 &&
+      typeof arr[index] != "undefined"
     ) {
       return arr[index].key === obj.key ? arr[index].doc_count : 0;
     } else {
@@ -78,7 +91,7 @@ class RaidenEventChart extends React.Component {
     }
   }
 
-  handleTrackerChanged = t => {
+  handleTrackerChanged = (t: any) => {
     if (t) {
       const e = this.state.raidenEventSeries.atTime(t);
       let day = new Date(e.begin().getTime()).toDateString();

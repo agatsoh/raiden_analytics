@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDom from "react-dom";
-import RaidenEventChart from "./components/raiden_event_chart/raiden_event_chart.js";
+import RaidenEventChart from "./components/raiden_event_chart/raiden_event_chart";
 
 class RaidenStatics extends React.Component {
   render() {
