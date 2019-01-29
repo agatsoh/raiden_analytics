@@ -28,3 +28,4 @@ Definitions of all the events can be found [here](https://etherscan.io/address/0
 
 Preliminary understanding to formulate eth.events queries can be found [here](https://ethevents.readthedocs.io/en/latest/elastic/tutorials/query.html).
 We mostly concentrate on making an (aggregate queries)[https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations.html] for all the statics in raiden using eth.events.
+Currently only [one query](https://github.com/agatsoh/raiden_analytics/blob/master/src/services/helpers/event_queries.ts) with [one chart](https://github.com/agatsoh/raiden_analytics/tree/master/src/components/raiden_event_chart) exists showing a date histogram of the times each of the above event was fired. Queries should be first tested on curl or more likely a tool like postman and then could be included in the project for more processing and display at the frontend.
