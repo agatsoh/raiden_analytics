@@ -202,6 +202,34 @@ WHERE event = 'ChannelNewDeposit' AND address = '0xa5C9ECf54790334B73E5DfA1ff566
 ```
 
 
+## Max AND Min historgrams
+
+```sql
+with t AS (
+    SELECT generate_series(mitstamp,matstamp,'1 days') AS int
+    FROM 
+    (
+        SELECT min(timestamp) mitstamp, now()::timestamp AS matstamp 
+        FROM "event" 
+        WHERE event = 'ChannelOpened' AND address = '0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474' 
+    ) a
+    order BY int asc
+),
+deposited_data AS (
+	Select timestamp, (args->2#>'{num}')::numeric as deposited_amount
+	FROM "event"
+	WHERE event = 'ChannelNewDeposit' AND address = '0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474'
+	ORDER BY timestamp
+)
+SELECT int AS timestampwindowstart, MAX(deposited_amount) -- can be replaced with MIN
+FILTER (WHERE timestamp >= t.int AND timestamp < (t.int + interval '1 days'))
+FROM t, deposited_data
+GROUP BY int
+ORDER BY int
+```
+
+
+
 ## All participants that no longer have a channel.
 
 In order to get the number of participants that don't have a channel using the given events.
